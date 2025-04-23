@@ -1,5 +1,6 @@
 const Position = require('../models/Position');
 const Company = require('../models/Company');
+const Interview = require('../models/Interview');
 
 // @desc    Get all positions
 // @route   GET /api/v1/positions
@@ -71,7 +72,9 @@ exports.getPosition = async (req, res, next) => {
 // @route   POST /api/v1/companies/:companyId/positions
 // @access  Private
 exports.createPosition = async (req, res, next) => {
+    
     try {
+
         const company = await Company.findById(req.params.companyId);
 
         if (!company) {
@@ -84,6 +87,7 @@ exports.createPosition = async (req, res, next) => {
         req.body.company = req.params.companyId;
 
         const position = await Position.create(req.body);
+       
 
         res.status(201).json({
             success: true,
@@ -130,6 +134,7 @@ exports.updatePosition = async (req, res, next) => {
     }
 };
 
+
 // @desc    Delete a position
 // @route   DELETE /api/v1/positions/:id
 // @access  Private
@@ -144,6 +149,9 @@ exports.deletePosition = async (req, res, next) => {
             });
         }
 
+        await Interview.deleteMany({ position: req.params.id });
+
+    
         await position.deleteOne();
 
         res.status(200).json({
@@ -155,6 +163,44 @@ exports.deletePosition = async (req, res, next) => {
         return res.status(500).json({
             success: false,
             message: 'Cannot delete position'
+        });
+    }
+};
+
+///get all skill
+// GET /api/v1/positions/skill
+exports.getAllSkill = async (req, res, next) => {
+    try {
+        const result = await Position.aggregate([
+            { $unwind: "$skill" },
+            {
+              $group: {
+                _id: { $toLower: "$skill" },
+                originalTag: { $first: "$skill" } // Keep original casing
+              }
+            },
+            {
+              $group: {
+                _id: null,
+                skill: { $addToSet: "$originalTag" }
+              }
+            },
+            { $project: { _id: 0, skill: 1 } }
+          ]);
+          
+          const skill = result[0]?.skill || [];
+          
+
+        res.status(200).json({
+            success: true,
+            count: skill.length,
+            data: skill
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch skill'
         });
     }
 };

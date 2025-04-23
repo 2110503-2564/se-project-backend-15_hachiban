@@ -1,5 +1,7 @@
 const Company = require('../models/Company');
 const Interview = require('../models/Interview');
+const Position = require('../models/Position');
+
 //@desc     Get all companies
 //@route    GET /api/v1/companies
 //@access   Public
@@ -93,13 +95,23 @@ exports.getCompany = async (req,res,next) =>{
 //@desc     Create new company
 //@route    POST /api/v1/companies
 //@access   Private
-exports.createCompany = async (req,res,next) =>{
-    const company =await Company.create(req.body);
-    res.status(201).json({
-        success:true, 
-        data:company
-    });
-};
+exports.createCompany = async (req, res, next) => {
+    try {
+      const company = await Company.create(req.body);
+      res.status(201).json({
+        success: true,
+        data: company
+      });
+    } catch (err) {
+      console.error('Error creating company:', err.message);
+      res.status(500).json({
+        success: false,
+        error: 'Server Error',
+        message: err.message // optional: useful for debugging
+      });
+    }
+  };
+  
 
 //@desc     Update company
 //@route    PUT /api/v1/companies/:id
@@ -134,15 +146,16 @@ exports.deleteCompany = async (req,res,next) =>{
                 message: `Company not found with id of ${req.params.id}`
             });
         }
-        await Interview.deleteMany({company:req.params.id});
-        await company.deleteOne({_id:req.params.id});
 
-        res.status(200).json({success:true, data:{}});
+        await Interview.deleteMany({ company: req.params.id });
+        await Position.deleteMany({ company: req.params.id }); 
+        await company.deleteOne({ _id: req.params.id });
+
+        res.status(200).json({ success: true, data: {} });
     } catch(err){
-        res.status(400).json({success:false});
+        res.status(400).json({ success: false });
     }
 };
-
 
 
 ///get all tags
