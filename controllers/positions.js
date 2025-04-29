@@ -22,7 +22,7 @@ exports.getPositions = async (req, res, next) => {
             });
         }
 
-        const positions = await query;
+        const positions = await query.sort({title:1});
 
         res.status(200).json({
             success: true,
@@ -149,7 +149,15 @@ exports.deletePosition = async (req, res, next) => {
             });
         }
 
-        await Interview.deleteMany({ position: req.params.id });
+        const existingInterviews = await Interview.findOne({ position: req.params.id });
+
+    if (existingInterviews) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete position. There are active interviews associated with this position.`
+      });
+    }
+
 
     
         await position.deleteOne();
@@ -188,7 +196,8 @@ exports.getAllSkill = async (req, res, next) => {
             { $project: { _id: 0, skill: 1 } }
           ]);
           
-          const skill = result[0]?.skill || [];
+          let skill = result[0]?.skill || []; // <-- use let instead of const
+          skill = skill.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
           
 
         res.status(200).json({

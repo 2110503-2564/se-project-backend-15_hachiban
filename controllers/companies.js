@@ -35,12 +35,12 @@ exports.getCompanies = async (req,res,next) =>{
         const sortBy = req.query.sort.split(',').join(' ');
         query = query.sort(sortBy);
     }else{
-        query = query.sort('-createdAt');
+        query = query.sort('name');
     }
 
     //Pagination
     const page = parseInt(req.query.page,10)||1;
-    const limit = parseInt(req.query.limit,10)||25;
+    const limit = parseInt(req.query.limit,10)||1000;
     const startIndex = (page-1)*limit;
     const endIndex = page*limit;
     const total = await Company.countDocuments();
@@ -147,7 +147,16 @@ exports.deleteCompany = async (req,res,next) =>{
             });
         }
 
-        await Interview.deleteMany({ company: req.params.id });
+
+        const existingInterviews = await Interview.findOne({ company: req.params.id });
+
+        if (existingInterviews) {
+          return res.status(400).json({
+            success: false,
+            message: `Cannot delete company. There are active interviews associated with this company.`
+          });
+        }
+
         await Position.deleteMany({ company: req.params.id }); 
         await company.deleteOne({ _id: req.params.id });
 
@@ -177,10 +186,11 @@ exports.getAllTags = async (req, res, next) => {
               }
             },
             { $project: { _id: 0, tags: 1 } }
-          ]);
-          
-          const tags = result[0]?.tags || [];
-          
+        ]);
+
+        let tags = result[0]?.tags || [];
+
+        tags = tags.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
         res.status(200).json({
             success: true,
